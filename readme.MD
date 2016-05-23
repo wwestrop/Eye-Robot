@@ -13,11 +13,20 @@ Basically the software is trying to provide an answer for the following question
 
 For example, here is the letter 'a':
 
+![](/doc/a_small.png)
+
+
 And here it is magnified: 
+
+![](/doc/a_magnified.png)
+
 
 We'll pick a number of random pixels to look at (highlighted in orange):
 
-And if the pixels we look at are inside the shape, yay, score some points. If they're outside the shape, boo, lose some points. 
+![](/doc/a_random.png)
+
+
+And if the pixels we look at are inside the shape, yay, we score some points. If they're outside the shape, boo, we lose some points. 
 
 
 # Training the software 
@@ -27,7 +36,12 @@ Initially, the way I was choosing this subset was by picking a set of pixels at 
 
 The idea was that this:
 
+![](/doc/a_random.png)
+
+
 Would converge to this:
+
+![](/doc/a_clustered.png)
 
 
 # What did I learn?
