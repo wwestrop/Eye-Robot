@@ -9,38 +9,57 @@ namespace EyeRobot
     {
         static void Main(string[] args)
         {
-            var a1 = Bitmap.FromFile(@"..\..\..\..\sample-data\a1.png") as Bitmap;           // TODO bitmaps are disposable
+            WrappedBitmap a1w;
+            WrappedBitmap a2w;
+            WrappedBitmap a3w;
+            WrappedBitmap bw;
+            WrappedBitmap cw;
+            WrappedBitmap dw;
+            WrappedBitmap ew;
+            WrappedBitmap fw;
+            using (var a1 = Bitmap.FromFile(@"..\..\..\..\sample-data\a1.png") as Bitmap)
+            using (var a2 = Bitmap.FromFile(@"..\..\..\..\sample-data\a2.png") as Bitmap)
+            using (var a3 = Bitmap.FromFile(@"..\..\..\..\sample-data\a3.png") as Bitmap)
+            using (var b = Bitmap.FromFile(@"..\..\..\..\sample-data\b.png") as Bitmap)
+            using (var c = Bitmap.FromFile(@"..\..\..\..\sample-data\c.png") as Bitmap)
+            using (var d = Bitmap.FromFile(@"..\..\..\..\sample-data\d.png") as Bitmap)
+            using (var e = Bitmap.FromFile(@"..\..\..\..\sample-data\e.png") as Bitmap)
+            using (var f = Bitmap.FromFile(@"..\..\..\..\sample-data\f.png") as Bitmap)
+            {
+                a1w = new WrappedBitmap(a1);
+                a2w = new WrappedBitmap(a2);
+                a3w = new WrappedBitmap(a3);
+                bw = new WrappedBitmap(b);
+                cw = new WrappedBitmap(c);
+                dw = new WrappedBitmap(d);
+                ew = new WrappedBitmap(e);
+                fw = new WrappedBitmap(f);
+            }
+
+
             var charClassifier_1 = new Classifier<char>();
-            charClassifier_1.Train(a1, 'a', TuningParams.TrainingRounds);
-
-            var a2 = Bitmap.FromFile(@"..\..\..\..\sample-data\a2.png") as Bitmap;
-            var a3 = Bitmap.FromFile(@"..\..\..\..\sample-data\a3.png") as Bitmap;
-
-            var b = Bitmap.FromFile(@"..\..\..\..\sample-data\b.png") as Bitmap;
-            charClassifier_1.Train(b, 'b', TuningParams.TrainingRounds);
-            var c = Bitmap.FromFile(@"..\..\..\..\sample-data\c.png") as Bitmap;
-            charClassifier_1.Train(c, 'c', TuningParams.TrainingRounds);
-            var d = Bitmap.FromFile(@"..\..\..\..\sample-data\d.png") as Bitmap;
-            charClassifier_1.Train(d, 'd', TuningParams.TrainingRounds);
-            var e = Bitmap.FromFile(@"..\..\..\..\sample-data\e.png") as Bitmap;
-            charClassifier_1.Train(e, 'e', TuningParams.TrainingRounds);
-            var f = Bitmap.FromFile(@"..\..\..\..\sample-data\f.png") as Bitmap;
-            charClassifier_1.Train(f, 'f', TuningParams.TrainingRounds);
+            charClassifier_1.Train(a1w, 'a', TuningParams.TrainingRounds);
+            
+            charClassifier_1.Train(bw, 'b', TuningParams.TrainingRounds);
+            charClassifier_1.Train(cw, 'c', TuningParams.TrainingRounds);
+            charClassifier_1.Train(dw, 'd', TuningParams.TrainingRounds);
+            charClassifier_1.Train(ew, 'e', TuningParams.TrainingRounds);
+            charClassifier_1.Train(fw, 'f', TuningParams.TrainingRounds);
 
 
-            var x = charClassifier_1.Classify(c).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+            var x = charClassifier_1.Classify(cw).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
             Console.WriteLine("Input (C) is likely to be these letters (most likely first): {0}", string.Join(", ", x.Take(10)));
 
-            var y = charClassifier_1.Classify(f).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+            var y = charClassifier_1.Classify(fw).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
             Console.WriteLine("Input (F) is likely to be these letters (most likely first): {0}", string.Join(", ", y.Take(10)));
 
-            var z = charClassifier_1.Classify(a1).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+            var z = charClassifier_1.Classify(a1w).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
             Console.WriteLine("Input (A) is likely to be these letters (most likely first): {0}", string.Join(", ", z.Take(10)));
 
-            var z1 = charClassifier_1.Classify(a2).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+            var z1 = charClassifier_1.Classify(a2w).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
             Console.WriteLine("Input (A2) is likely to be these letters (most likely first): {0}", string.Join(", ", z1.Take(10)));
 
-            var z2 = charClassifier_1.Classify(a3).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+            var z2 = charClassifier_1.Classify(a3w).OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
             Console.WriteLine("Input (A3) is likely to be these letters (most likely first): {0}", string.Join(", ", z2.Take(10)));
 
             //new Recogniser<char>('A').DrawSamplePoints().Save(@"..\..\..\..\sample-data\hello world.bmp");
@@ -75,7 +94,7 @@ namespace EyeRobot
         /// Returns a list of symbols the classifier recognises, paired
         /// with the score that the given image matches that symbol
         /// </summary>
-        public Dictionary<TSymbol, int> Classify(Bitmap input)
+        public Dictionary<TSymbol, int> Classify(WrappedBitmap input)
         {
             return _recognisers
                 .Select(r => new
@@ -89,9 +108,9 @@ namespace EyeRobot
         /// <summary>
         /// Trains the model to recognise the specified input as the specified symbol
         /// </summary>
-        public void Train(Bitmap inputData, TSymbol representedValue, uint rounds)
+        public void Train(WrappedBitmap inputData, TSymbol representedValue, uint rounds)
         {
-            var highestScoringPixelWeights = Enumerable.Range(0, (int)rounds)                 //.AsParallel()  -- Bitmap reading is not thread safe !??!?!??
+            var highestScoringPixelWeights = Enumerable.Range(0, (int)rounds)
                 .Select(i => new Scorer(new TuningParams.Scoring()))                            // TODO nested constructors is smelly
                 .Select(s => new
                 {
@@ -99,6 +118,7 @@ namespace EyeRobot
                     Score = s.Score(inputData)
                 })
                 .OrderByDescending(s => s.Score)
+                .AsParallel().AsOrdered()
                 .First();
 
             var rec = new Recogniser<TSymbol>(representedValue, highestScoringPixelWeights.Scorer);
@@ -132,7 +152,7 @@ namespace EyeRobot
         /// Calculates a score for the given input data. The higher the score, the more 
         /// likely that the input image represents the value of <c>Symbol</c>.
         /// </summary>
-        public int Score(Bitmap inputData)
+        public int Score(WrappedBitmap inputData)
         {
             return _scorer.Score(inputData);
         }
@@ -218,13 +238,12 @@ namespace EyeRobot
         /// Calculates a score for the given input data. The higher the score, the more 
         /// likely that the input image represents the value of <c>Symbol</c>.
         /// </summary>
-        public int Score(Bitmap inputData)
+        public int Score(WrappedBitmap inputData)
         {
             int score = 0;
             foreach (var point in _sampledPixels)
             {
-                var pixel = inputData.GetPixel(point.X, point.Y);
-                if (IsPixelSet(pixel))
+                if (inputData.IsPixelSet(point.X, point.Y))
                 {
                     score += _positiveScoreOffset;
                 }
@@ -294,5 +313,4 @@ namespace EyeRobot
             _sampledPixels = RandomisePixels();
         }
     }
-
 }
