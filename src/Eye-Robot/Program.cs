@@ -110,18 +110,37 @@ namespace EyeRobot
         /// </summary>
         public void Train(WrappedBitmap inputData, TSymbol representedValue, uint rounds)
         {
-            var highestScoringPixelWeights = Enumerable.Range(0, (int)rounds)
-                .Select(i => new Scorer(new TuningParams.Scoring()))                            // TODO nested constructors is smelly
+            var initialGeneration = Enumerable.Range(0, (int)rounds)
+                .Select(i => new Scorer(new TuningParams.Scoring()))                // TODO nested constructors is smelly
+                .Select(s => new
+                {
+                    Scorer = s,
+                    Score = s.Score(inputData)
+                })
+                .AsParallel()
+                .OrderByDescending(s => s.Score);
+            
+            // Having acquired the initial set of sampling pixels via sheer randomness, we'll work with 
+            // the best we've got and try and massage them into something better. 
+            var mutParams = new TuningParams.Mutation();
+            var initialBestCandidates = initialGeneration.Take(100);            // TODO parameterise magic value (which was decided totally arbitrarily anyway)
+            var initialBestCandidatesWithMutatedVariants = initialBestCandidates
+                .Select(s => new {
+                    Parent = s.Scorer,
+                    Children = s.Scorer.MutateMany(mutParams)
+                });
+            var bestOftheMutantStrains = initialBestCandidatesWithMutatedVariants
+                .SelectMany(x => x.Children)
                 .Select(s => new
                 {
                     Scorer = s,
                     Score = s.Score(inputData)
                 })
                 .OrderByDescending(s => s.Score)
-                .AsParallel().AsOrdered()
+                .Select(x => x.Scorer)
                 .First();
-
-            var rec = new Recogniser<TSymbol>(representedValue, highestScoringPixelWeights.Scorer);
+            
+            var rec = new Recogniser<TSymbol>(representedValue, bestOftheMutantStrains);
             RegisterRecogniser(rec);
         }
 
@@ -172,67 +191,13 @@ namespace EyeRobot
         {
             return _scorer.DrawSampledPixels();
         }
-
-        /// <summary>
-        /// Randomises the sampled pixels, but keeps them relatively close to their existing locations. 
-        /// </summary>
-        //public void Mutate()
-        //{
-        //    int n = _randomNumGenerator.Next(TuningParams.Mutation..PixelRandomChurn);
-        //    for(int i = 0 ; i < n; i++)
-        //    {
-        //        // Remove one of the pixels at random
-        //        this.SampledPixels.RemoveAt(_randomNumGenerator.Next(TuningParams.ImageSize));
-        //    }
-
-        //    // Skew some of the remaining ones
-        //    n = _randomNumGenerator.Next(TuningParams.Mutation.PixelRandomSkewNumber);
-        //    for(int i = 0; i < n; i++)
-        //    {
-        //        // TODO the same pixels could be skewed more than once (does that even matter?)
-        //        int pixIndex = _randomNumGenerator.Next(this.SampledPixels.Count - 1);
-        //        this.SampledPixels[pixIndex] = new Point(
-        //            this.SampledPixels[pixIndex].X + TuningParams.Mutation.PixelRandomSkewOffset - TuningParams.Mutation.PixelRandomSkewOffset / 2, 
-        //            this.SampledPixels[pixIndex].Y + TuningParams.Mutation.PixelRandomSkewOffset - TuningParams.Mutation.PixelRandomSkewOffset / 2);
-        //    }
-
-        //    // Add some more random new ones (approx the same number to replace those that were removed or "churned")
-        //    n = _randomNumGenerator.Next(TuningParams.Mutation..PixelRandomChurn);
-        //    for (int i = 0; i < n; i++)
-        //    {
-        //        // NOTE - it's possible to get duplicates, in which case the same pixel is counted twice
-        //        // TODO check for off-by-ones (can we hit the image edges?)
-        //        this.SampledPixels.Add(
-        //            new Point(
-        //                _randomNumGenerator.Next(TuningParams.ImageSize),
-        //                _randomNumGenerator.Next(TuningParams.ImageSize)
-        //            )
-        //        );
-        //    }
-
-        //    // modify the negative/positive offset randomly
-        //    PositiveScoreOffset = (byte)(PositiveScoreOffset + _randomNumGenerator.Next(TuningParams.PositiveRandOffset) - TuningParams.PositiveRandOffset / 2);
-        //    NegativeScoreOffset = (byte)(NegativeScoreOffset + _randomNumGenerator.Next(TuningParams.NegativeRandOffset) - TuningParams.NegativeRandOffset / 2);
-        //}
     }
 
     internal class Scorer
     {
         private static readonly Random _randomNumGenerator = new Random();
-
-        /// <summary>
-        /// The amount that will be subtracted from the score when one of our expected 
-        /// pixels isn't present on the input image
-        /// </summary>
-        private readonly byte _negativeScoreOffset;
-
-        /// <summary>
-        /// The amount that will be added to the score when one of our expected 
-        /// pixels is present on the input image
-        /// </summary>
-        private readonly byte _positiveScoreOffset;
-
-        private readonly List<Point> _sampledPixels;
+        private readonly TuningParams.Scoring _tuningParams;
+        private readonly List<Point> _pixelsToSample;
 
         /// <summary>
         /// Calculates a score for the given input data. The higher the score, the more 
@@ -241,15 +206,15 @@ namespace EyeRobot
         public int Score(WrappedBitmap inputData)
         {
             int score = 0;
-            foreach (var point in _sampledPixels)
+            foreach (var point in _pixelsToSample)
             {
                 if (inputData.IsPixelSet(point.X, point.Y))
                 {
-                    score += _positiveScoreOffset;
+                    score += _tuningParams.PositiveScoreOffset;
                 }
                 else
                 {
-                    score = Math.Min(0, score - _negativeScoreOffset);
+                    score -= _tuningParams.NegativeScoreOffset;
                 }
             }
 
@@ -262,7 +227,7 @@ namespace EyeRobot
         public Bitmap DrawSampledPixels()
         {
             var sampleMap = new Bitmap(TuningParams.ImageSize, TuningParams.ImageSize/*, PixelFormat.Format1bppIndexed*/);
-            foreach (var point in _sampledPixels)
+            foreach (var point in _pixelsToSample)
             {
                 sampleMap.SetPixel(point.X, point.Y, Color.Black);
             }
@@ -293,13 +258,73 @@ namespace EyeRobot
             return randomPixels;
         }
 
-        /// <summary>
-        /// We effectively treat the image as monochrome, a pixel is either below
-        /// half-brightness (set), or above it (un-set). 
-        /// </summary>
-        private bool IsPixelSet(Color color)
+        public IEnumerable<Scorer> MutateMany(TuningParams.Mutation tuningParams)
         {
-            return color.GetBrightness() < 0.5f;
+            return Enumerable.Range(0, tuningParams.SpawnedDescendants)
+                .Select(i => Mutate(tuningParams));
+        }
+
+        /// <summary>
+        /// Randomises the sampled pixels, but keeps them relatively close to their existing locations. 
+        /// </summary>
+        public Scorer Mutate(TuningParams.Mutation tuningParams)
+        {
+            var newPixels = new List<Point>(_pixelsToSample);
+
+            int n = _randomNumGenerator.Next(tuningParams.PixelRandomChurn);
+            for (int i = 0; i < n; i++)
+            {
+                // Remove one of the pixels at random
+                newPixels.RemoveAt(_randomNumGenerator.Next(TuningParams.ImageSize));
+            }
+
+            // Skew some of the remaining ones
+            n = _randomNumGenerator.Next(tuningParams.PixelRandomSkewNumber);
+            for (int i = 0; i < n; i++)
+            {
+                // TODO the same pixels could be skewed more than once (does that even matter?)
+                int xOffset = _randomNumGenerator.Next(tuningParams.PixelRandomSkewOffset) - tuningParams.PixelRandomSkewOffset;
+                int yOffset = _randomNumGenerator.Next(tuningParams.PixelRandomSkewOffset) - tuningParams.PixelRandomSkewOffset;
+                int pixIndex = _randomNumGenerator.Next(newPixels.Count - 1);
+                newPixels[pixIndex] = ConstrainPixelToImage(
+                    newPixels[pixIndex].X + xOffset,
+                    newPixels[pixIndex].Y + yOffset);
+            }
+
+            // Add some more random new ones (approx the same number to replace those that were removed or "churned")
+            n = _randomNumGenerator.Next(tuningParams.PixelRandomChurn);
+            for (int i = 0; i < n; i++)
+            {
+                // NOTE - it's possible to get duplicates, in which case the same pixel is counted twice
+                // TODO check for off-by-ones (can we hit the image edges?)
+                newPixels.Add(
+                    new Point(
+                        _randomNumGenerator.Next(TuningParams.ImageSize),
+                        _randomNumGenerator.Next(TuningParams.ImageSize)
+                    )
+                );
+            }
+
+            // modify the negative/positive offset randomly
+            //_positiveScoreOffset = (byte)(_positiveScoreOffset + _randomNumGenerator.Next(tuningParams.PositiveRandOffset) - TuningParams.PositiveRandOffset / 2);
+            //_negativeScoreOffset = (byte)(_negativeScoreOffset + _randomNumGenerator.Next(TuningParams.Scoring.NegativeRandOffset) - TuningParams.NegativeRandOffset / 2);
+            // TODO keeping these params the same as our parent for now, and only randomoising on the sampled pixels. the randomisation of varying parameters could go on forever!!!
+
+            return new Scorer(_tuningParams, newPixels);
+        }
+
+        /// <summary>
+        /// Caps the given x and y co-ordinates to make sure they fit inside the image
+        /// </summary>
+        private Point ConstrainPixelToImage(int x, int y)
+        {
+            x = Math.Max(0, x);
+            x = Math.Min(TuningParams.ImageSize, x);
+
+            y = Math.Max(0, y);
+            y = Math.Min(TuningParams.ImageSize, y);
+            
+            return new Point(x, y);
         }
 
         /// <summary>
@@ -307,10 +332,14 @@ namespace EyeRobot
         /// </summary>
         public Scorer(TuningParams.Scoring tuningParams)
         {
-            _negativeScoreOffset = tuningParams.NegativeRandOffset;
-            _positiveScoreOffset = tuningParams.PositiveRandOffset;
+            _tuningParams = tuningParams;
+            _pixelsToSample = RandomisePixels();
+        }
 
-            _sampledPixels = RandomisePixels();
+        public Scorer(TuningParams.Scoring tuningParams, List<Point> pixelsToSample)         // TODO here, the caller is providing us a list. But it, nor its contents are immutable. Could we force that somehow???
+        {
+            _tuningParams = tuningParams;
+            _pixelsToSample = pixelsToSample;
         }
     }
 }
