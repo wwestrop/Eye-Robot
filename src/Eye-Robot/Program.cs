@@ -64,12 +64,12 @@ namespace EyeRobot
 
     internal class Classifier<TSymbol>
     {
-        private readonly List<Recogniser<TSymbol>> _recognisers = new List<Recogniser<TSymbol>>();
+        private readonly Dictionary<TSymbol, Recogniser<TSymbol>> _recognisers = new Dictionary<TSymbol, Recogniser<TSymbol>>();
 
         /// <summary>
         /// A collection of every symbol that this classifier is trained to recognise
         /// </summary>
-        public IEnumerable<TSymbol> KnownSymbols => _recognisers.Select(r => r.Symbol);
+        public IEnumerable<TSymbol> KnownSymbols => _recognisers.Select(r => r.Key);
 
         /// <summary>
         /// Returns a list of symbols the classifier recognises, paired
@@ -80,8 +80,8 @@ namespace EyeRobot
             return _recognisers
                 .Select(r => new
                 {
-                    Symbol = r.Symbol,
-                    Score = r.Score(input)
+                    Symbol = r.Key,
+                    Score = r.Value.Score(input)
                 })
                 .ToDictionary(kvp => kvp.Symbol, kvp => kvp.Score);
         }
@@ -91,67 +91,128 @@ namespace EyeRobot
         /// </summary>
         public void Train(Bitmap inputData, TSymbol representedValue, uint rounds)
         {
-            var rec = GetRecogniser(representedValue);
-
-            var highestScoringPixelWeights = Enumerable.Range(0, (int) rounds)                 //.AsParallel()  -- Bitmap reading is not thread safe !??!?!??
-                .Select(i => new Recogniser<TSymbol>(representedValue))
-                .Select(r => new
+            var highestScoringPixelWeights = Enumerable.Range(0, (int)rounds)                 //.AsParallel()  -- Bitmap reading is not thread safe !??!?!??
+                .Select(i => new Scorer(new TuningParams.Scoring()))                            // TODO nested constructors is smelly
+                .Select(s => new
                 {
-                    Recogniser = r,
-                    Score = r.Score(inputData)
+                    Scorer = s,
+                    Score = s.Score(inputData)
                 })
                 .OrderByDescending(s => s.Score)
                 .First();
-            
-            // TODO: don't like this bit. rework
-            _recognisers.Remove(rec);
-            _recognisers.Add(highestScoringPixelWeights.Recogniser);
+
+            var rec = new Recogniser<TSymbol>(representedValue, highestScoringPixelWeights.Scorer);
+            RegisterRecogniser(rec);
         }
 
-        // Get the recogniser for this symbol, or create one if we don't already have one
-        private Recogniser<TSymbol> GetRecogniser(TSymbol forSymbol)
+        /// <summary>
+        /// Adds a recogniser to the collection, replacing it if it already exists
+        /// </summary>
+        private void RegisterRecogniser(Recogniser<TSymbol> recogniser)
         {
-            var recogniser = _recognisers.SingleOrDefault(r => forSymbol.Equals(r.Symbol));
-            if (recogniser == null)
-            {
-                recogniser = new Recogniser<TSymbol>(forSymbol);
-                _recognisers.Add(recogniser);
-            }
-
-            return recogniser;
+            // TODO could change to Dictionary<TSymbol, List<Recogniser<TSymbol>>> for training multiple inputs for the same symbol??
+            _recognisers[recogniser.Symbol] = recogniser;
         }
     }
-    
+
     /// <summary>
     /// Recognises a single symbol and produces a score for an input image indicating 
     /// how likely that image is to be the symbol that we are trained to recognise. 
     /// </summary>
     internal class Recogniser<TSymbol>
     {
-        private static readonly Random _randomNumGenerator = new Random();
-
-        /// <summary>
-        /// The list of pixels we expect to be set in order to consider a given
-        /// input image as the symbol we are searching for
-        /// </summary>
-        public List<Point> SampledPixels { get; set; }
+        private readonly Scorer _scorer;
 
         /// <summary>
         /// The symbol which this object is trained to recognise
         /// </summary>
-        public TSymbol Symbol { get; set; }
+        public TSymbol Symbol { get; private set; }
+
+        /// <summary>
+        /// Calculates a score for the given input data. The higher the score, the more 
+        /// likely that the input image represents the value of <c>Symbol</c>.
+        /// </summary>
+        public int Score(Bitmap inputData)
+        {
+            return _scorer.Score(inputData);
+        }
+
+        /// <param name="symbol">The symbol which the given scorer is optimised for</param>
+        /// <param name="scorer">An object which is trained to recognise the symbol specified by the <c>symbol</c> param</param>
+        public Recogniser(TSymbol symbol, Scorer scorer)
+        {
+            this.Symbol = symbol;
+            _scorer = scorer;
+        }
+
+        /// <summary>
+        /// Outputs a bitmap showing visaully which pixels will be sampled
+        /// </summary>
+        public Bitmap DrawSampledPixels()
+        {
+            return _scorer.DrawSampledPixels();
+        }
+
+        /// <summary>
+        /// Randomises the sampled pixels, but keeps them relatively close to their existing locations. 
+        /// </summary>
+        //public void Mutate()
+        //{
+        //    int n = _randomNumGenerator.Next(TuningParams.Mutation..PixelRandomChurn);
+        //    for(int i = 0 ; i < n; i++)
+        //    {
+        //        // Remove one of the pixels at random
+        //        this.SampledPixels.RemoveAt(_randomNumGenerator.Next(TuningParams.ImageSize));
+        //    }
+
+        //    // Skew some of the remaining ones
+        //    n = _randomNumGenerator.Next(TuningParams.Mutation.PixelRandomSkewNumber);
+        //    for(int i = 0; i < n; i++)
+        //    {
+        //        // TODO the same pixels could be skewed more than once (does that even matter?)
+        //        int pixIndex = _randomNumGenerator.Next(this.SampledPixels.Count - 1);
+        //        this.SampledPixels[pixIndex] = new Point(
+        //            this.SampledPixels[pixIndex].X + TuningParams.Mutation.PixelRandomSkewOffset - TuningParams.Mutation.PixelRandomSkewOffset / 2, 
+        //            this.SampledPixels[pixIndex].Y + TuningParams.Mutation.PixelRandomSkewOffset - TuningParams.Mutation.PixelRandomSkewOffset / 2);
+        //    }
+
+        //    // Add some more random new ones (approx the same number to replace those that were removed or "churned")
+        //    n = _randomNumGenerator.Next(TuningParams.Mutation..PixelRandomChurn);
+        //    for (int i = 0; i < n; i++)
+        //    {
+        //        // NOTE - it's possible to get duplicates, in which case the same pixel is counted twice
+        //        // TODO check for off-by-ones (can we hit the image edges?)
+        //        this.SampledPixels.Add(
+        //            new Point(
+        //                _randomNumGenerator.Next(TuningParams.ImageSize),
+        //                _randomNumGenerator.Next(TuningParams.ImageSize)
+        //            )
+        //        );
+        //    }
+
+        //    // modify the negative/positive offset randomly
+        //    PositiveScoreOffset = (byte)(PositiveScoreOffset + _randomNumGenerator.Next(TuningParams.PositiveRandOffset) - TuningParams.PositiveRandOffset / 2);
+        //    NegativeScoreOffset = (byte)(NegativeScoreOffset + _randomNumGenerator.Next(TuningParams.NegativeRandOffset) - TuningParams.NegativeRandOffset / 2);
+        //}
+    }
+
+    internal class Scorer
+    {
+        private static readonly Random _randomNumGenerator = new Random();
 
         /// <summary>
         /// The amount that will be subtracted from the score when one of our expected 
         /// pixels isn't present on the input image
         /// </summary>
-        public byte NegativeScoreOffset { get; set; }
+        private readonly byte _negativeScoreOffset;
 
         /// <summary>
         /// The amount that will be added to the score when one of our expected 
         /// pixels is present on the input image
         /// </summary>
-        public byte PositiveScoreOffset { get; set; }
+        private readonly byte _positiveScoreOffset;
+
+        private readonly List<Point> _sampledPixels;
 
         /// <summary>
         /// Calculates a score for the given input data. The higher the score, the more 
@@ -160,51 +221,57 @@ namespace EyeRobot
         public int Score(Bitmap inputData)
         {
             int score = 0;
-            foreach (var point in this.SampledPixels)
+            foreach (var point in _sampledPixels)
             {
                 var pixel = inputData.GetPixel(point.X, point.Y);
                 if (IsPixelSet(pixel))
                 {
-                    score += PositiveScoreOffset;
+                    score += _positiveScoreOffset;
                 }
                 else
                 {
-                    score = Math.Min(0, score - NegativeScoreOffset);
+                    score = Math.Min(0, score - _negativeScoreOffset);
                 }
             }
 
             return score;
         }
 
-        public Recogniser(TSymbol symbol)
+        /// <summary>
+        /// Outputs a bitmap showing visaully which pixels will be sampled
+        /// </summary>
+        public Bitmap DrawSampledPixels()
         {
-            this.Symbol = symbol;
+            var sampleMap = new Bitmap(TuningParams.ImageSize, TuningParams.ImageSize/*, PixelFormat.Format1bppIndexed*/);
+            foreach (var point in _sampledPixels)
+            {
+                sampleMap.SetPixel(point.X, point.Y, Color.Black);
+            }
 
-            PositiveScoreOffset = (byte) _randomNumGenerator.Next(TuningParams.PositiveRandOffset);
-            NegativeScoreOffset = (byte) _randomNumGenerator.Next(TuningParams.NegativeRandOffset);
-            
-            RandomisePixels();
+            return sampleMap;
         }
 
         /// <summary>
-        /// Randomly initialises the locations of the pixels that will be sampled
+        /// Generate a random list of pixels to be sampled
         /// </summary>
-        private void RandomisePixels()
+        private List<Point> RandomisePixels()
         {
-            int numPixels = TuningParams.MinPixels + _randomNumGenerator.Next(TuningParams.MaxPixels - TuningParams.MinPixels);
+            int numPixels = TuningParams.Generation.MinPixels + _randomNumGenerator.Next(TuningParams.Generation.MaxPixels - TuningParams.Generation.MinPixels);
 
-            this.SampledPixels = new List<Point>();
+            var randomPixels = new List<Point>();
             for (int i = 0; i < numPixels; i++)
             {
                 // NOTE - it's possible to get duplicates, in which case the same pixel is counted twice
                 // TODO check for off-by-ones (can we hit the image edges?)
-                this.SampledPixels.Add(
+                randomPixels.Add(
                     new Point(
                         _randomNumGenerator.Next(TuningParams.ImageSize),
                         _randomNumGenerator.Next(TuningParams.ImageSize)
                     )
                 );
             }
+
+            return randomPixels;
         }
 
         /// <summary>
@@ -217,59 +284,15 @@ namespace EyeRobot
         }
 
         /// <summary>
-        /// Outputs a bitmap showing visaully which pixels this recogniser will sample from
+        /// Intitialises randomly
         /// </summary>
-        public Bitmap DrawSamplePoints()
+        public Scorer(TuningParams.Scoring tuningParams)
         {
-            var sampleMap = new Bitmap(TuningParams.ImageSize, TuningParams.ImageSize/*, PixelFormat.Format1bppIndexed*/);
-            foreach(var point in this.SampledPixels)
-            {
-                sampleMap.SetPixel(point.X, point.Y, Color.Black);
-            }
+            _negativeScoreOffset = tuningParams.NegativeRandOffset;
+            _positiveScoreOffset = tuningParams.PositiveRandOffset;
 
-            return sampleMap;
-        }
-        
-        /// <summary>
-        /// Randomises the sampled pixels, but keeps them relatively close to their existing locations. 
-        /// </summary>
-        public void Mutate()
-        {
-            int n = _randomNumGenerator.Next(TuningParams.PixelRandomChurn);
-            for(int i = 0 ; i < n; i++)
-            {
-                // Remove one of the pixels at random
-                this.SampledPixels.RemoveAt(_randomNumGenerator.Next(TuningParams.ImageSize));
-            }
-
-            // Skew some of the remaining ones
-            n = _randomNumGenerator.Next(TuningParams.PixelRandomSkewNumber);
-            for(int i = 0; i < n; i++)
-            {
-                // TODO the same pixels could be skewed more than once (does that even matter?)
-                int pixIndex = _randomNumGenerator.Next(this.SampledPixels.Count - 1);
-                this.SampledPixels[pixIndex] = new Point(
-                    this.SampledPixels[pixIndex].X + TuningParams.PixelRandomSkewOffset - TuningParams.PixelRandomSkewOffset / 2, 
-                    this.SampledPixels[pixIndex].Y + TuningParams.PixelRandomSkewOffset - TuningParams.PixelRandomSkewOffset / 2);
-            }
-
-            // Add some more random new ones (approx the same number to replace those that were removed or "churned")
-            n = _randomNumGenerator.Next(TuningParams.PixelRandomChurn);
-            for (int i = 0; i < n; i++)
-            {
-                // NOTE - it's possible to get duplicates, in which case the same pixel is counted twice
-                // TODO check for off-by-ones (can we hit the image edges?)
-                this.SampledPixels.Add(
-                    new Point(
-                        _randomNumGenerator.Next(TuningParams.ImageSize),
-                        _randomNumGenerator.Next(TuningParams.ImageSize)
-                    )
-                );
-            }
-            
-            // modify the negative/positive offset randomly
-            PositiveScoreOffset = (byte)(PositiveScoreOffset + _randomNumGenerator.Next(TuningParams.PositiveRandOffset) - TuningParams.PositiveRandOffset / 2);
-            NegativeScoreOffset = (byte)(NegativeScoreOffset + _randomNumGenerator.Next(TuningParams.NegativeRandOffset) - TuningParams.NegativeRandOffset / 2);
+            _sampledPixels = RandomisePixels();
         }
     }
+
 }

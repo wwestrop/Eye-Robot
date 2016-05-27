@@ -62,7 +62,13 @@ During training, because each selected subset is completely random, each one is 
 
 However! These features are not implemented yet. Stay tuned! 
 
-Also coming up, I'd like to add the ability to save a trained model to disk and reload it. Looking even further into the future, I'd like to add better image normalisation, and even further into the future still, I'm still pondering how I'd handle training  more than one example image for a given symbol. 
+Also coming up, things I'd like to look at:
+* So far, I'm getting reasonable (but not exceptional) results at recognising the image it was trained on. I'd like to build up a wider library of samples (See /sample-data/ - there are few different 'a' variants, but they are all quite similar). I'd also like to get some handwriting samples being recognised. 
+* Performance - In principle, the training algorithm is extremely parallelisable (trivially, I had thought, by calling 'AsParallel()' on the randomly generated list of 'Scorers'). I could convert the input bitmap to a 2-dimensional boolean array. This would save calling `IsPixelSet` repeatedly, avoiding the brightness calculation, which would save approximately 4%, according to Visual Studio's profiler. The training algorithm is also a memory pig. 
+* Originally, `TuningParams` was a static bundle of constants. I'd like to at some point randomise these as well and pass varying sets of tuning options to different parts of the program in an attempt to settle on a better training model (you can already see some of this in the code). This is also partly because I chose the constant values by trial-and-error, they may not necessarily be particularly good. 
+* I'd like to add the ability to save a trained model to disk and reload it. 
+* I'd like to add image normalisation (ie correcting input images for skew, sizing, spacing, etc)
+* Further into the future, I'm still pondering how I'd handle training  more than one example image for a given symbol
 
 
 
