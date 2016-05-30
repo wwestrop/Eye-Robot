@@ -45,8 +45,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classifier.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Recgoniser.cs" />
+    <Compile Include="Scorer.cs" />
     <Compile Include="TuningParams.cs" />
     <Compile Include="WrappedBitmap.cs" />
   </ItemGroup>
