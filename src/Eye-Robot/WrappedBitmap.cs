@@ -10,6 +10,17 @@ namespace EyeRobot
     {
         private readonly bool[,] _pixels;
 
+        /// <summary>
+        /// Initialises a new <c>WrappedBitmap</c> based upon the contents of an image file
+        /// </summary>
+        public static WrappedBitmap FromFile(string sourceFile)
+        {
+            using (var imageData = Image.FromFile(sourceFile) as Bitmap)
+            {
+                return new WrappedBitmap(imageData);
+            }
+        }
+
         public WrappedBitmap(Bitmap input)
         {
             _pixels = new bool[input.Width, input.Height];

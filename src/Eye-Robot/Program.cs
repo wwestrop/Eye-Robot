@@ -9,32 +9,14 @@ namespace EyeRobot
     {
         static void Main(string[] args)
         {
-            WrappedBitmap a1w;
-            WrappedBitmap a2w;
-            WrappedBitmap a3w;
-            WrappedBitmap bw;
-            WrappedBitmap cw;
-            WrappedBitmap dw;
-            WrappedBitmap ew;
-            WrappedBitmap fw;
-            using (var a1 = Bitmap.FromFile(@"..\..\..\..\sample-data\a1.png") as Bitmap)
-            using (var a2 = Bitmap.FromFile(@"..\..\..\..\sample-data\a2.png") as Bitmap)
-            using (var a3 = Bitmap.FromFile(@"..\..\..\..\sample-data\a3.png") as Bitmap)
-            using (var b = Bitmap.FromFile(@"..\..\..\..\sample-data\b.png") as Bitmap)
-            using (var c = Bitmap.FromFile(@"..\..\..\..\sample-data\c.png") as Bitmap)
-            using (var d = Bitmap.FromFile(@"..\..\..\..\sample-data\d.png") as Bitmap)
-            using (var e = Bitmap.FromFile(@"..\..\..\..\sample-data\e.png") as Bitmap)
-            using (var f = Bitmap.FromFile(@"..\..\..\..\sample-data\f.png") as Bitmap)
-            {
-                a1w = new WrappedBitmap(a1);
-                a2w = new WrappedBitmap(a2);
-                a3w = new WrappedBitmap(a3);
-                bw = new WrappedBitmap(b);
-                cw = new WrappedBitmap(c);
-                dw = new WrappedBitmap(d);
-                ew = new WrappedBitmap(e);
-                fw = new WrappedBitmap(f);
-            }
+            WrappedBitmap a1w = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\a1.png");
+            WrappedBitmap a2w = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\a2.png");
+            WrappedBitmap a3w = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\a3.png");
+            WrappedBitmap bw = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\b.png");
+            WrappedBitmap cw = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\c.png");
+            WrappedBitmap dw = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\d.png");
+            WrappedBitmap ew = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\e.png");
+            WrappedBitmap fw = WrappedBitmap.FromFile(@"..\..\..\..\sample-data\f.png");
 
 
             var charClassifier_1 = new Classifier<char>();
