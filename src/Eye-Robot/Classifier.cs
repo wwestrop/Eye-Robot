@@ -34,11 +34,7 @@ namespace EyeRobot
         {
             var initialGeneration = Enumerable.Range(0, (int)rounds)
                 .Select(i => new Scorer(new TuningParams.Scoring()))                // TODO nested constructors is smelly
-                .Select(s => new
-                {
-                    Scorer = s,
-                    Score = s.Score(inputData)
-                })
+                .Select(s => new ScorerScorePair(s, s.Score(inputData)))
                 .AsParallel()
                 .OrderByDescending(s => s.Score);
 
@@ -47,22 +43,16 @@ namespace EyeRobot
             var mutParams = new TuningParams.Mutation();
             var initialBestCandidates = initialGeneration.Take(100);            // TODO parameterise magic value (which was decided totally arbitrarily anyway)
             var initialBestCandidatesWithMutatedVariants = initialBestCandidates
-                .Select(s => new {
-                    Parent = s.Scorer,
-                    Children = s.Scorer.MutateMany(mutParams)
-                });
+                .Select(s => new ParentChildScoreCollection(s, s.Scorer.MutateMany(mutParams).Select(c => new ScorerScorePair(c, c.Score(inputData)))));            // TODO: neaten this, too many nested expressions
             var bestOftheMutantStrains = initialBestCandidatesWithMutatedVariants
                 .SelectMany(x => x.Children)
-                .Select(s => new
-                {
-                    Scorer = s,
-                    Score = s.Score(inputData)
-                })
                 .OrderByDescending(s => s.Score)
-                .Select(x => x.Scorer)
                 .First();
 
-            var rec = new Recogniser<TSymbol>(representedValue, bestOftheMutantStrains);
+            // Compute some stats for these mutations. These stats are for interest only, they don't affect any computation. 
+            Benchmarking.Mutation.AddDataPoints(initialBestCandidatesWithMutatedVariants);
+
+            var rec = new Recogniser<TSymbol>(representedValue, bestOftheMutantStrains.Scorer);
             RegisterRecogniser(rec);
         }
 
@@ -75,4 +65,36 @@ namespace EyeRobot
             _recognisers[recogniser.Symbol] = recogniser;
         }
     }
+
+    /// <summary>
+    /// Tuple which groups a scorer with the value it assigns to a given input image. 
+    /// Useful to avoid re-scoring the same image data multiple times. 
+    /// </summary>
+    internal class ScorerScorePair
+    {
+        public readonly Scorer Scorer;
+        public readonly int Score;
+
+        public ScorerScorePair(Scorer scorer, int score)
+        {
+            this.Scorer = scorer;
+            this.Score = score;
+        }
+    }
+
+    /// <summary>
+    /// Tuple which groups a parent scorer with the mutated variants derived from it
+    /// </summary>
+    internal class ParentChildScoreCollection
+    {
+        public readonly ScorerScorePair Parent;
+        public readonly IEnumerable<ScorerScorePair> Children;
+
+        public ParentChildScoreCollection(ScorerScorePair parent, IEnumerable<ScorerScorePair> children)
+        {
+            this.Parent = parent;
+            this.Children = children;
+        }
+    }
+
 }

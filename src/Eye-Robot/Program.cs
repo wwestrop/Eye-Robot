@@ -50,16 +50,5 @@ namespace EyeRobot
             Console.WriteLine("Press any key to quit");
             Console.ReadKey();
         }
-
-        /// <summary>
-        /// Gets input images into a consistent format for recognition or training 
-        /// so we can compare like-for-like (involves trimming whitespace and 
-        /// making a consistent size, could also involve correcting colours and rotating/deskewing)
-        /// </summary>
-        private static Bitmap NormaliseInput(Bitmap input)
-        {
-            // TODO: implement
-            return input;
-        }
     }
 }

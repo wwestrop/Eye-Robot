@@ -6,7 +6,7 @@ namespace EyeRobot
     /// Copies a monochrome bitmap into memory. Unlike <c>System.Drawing.Bitmap</c>, 
     /// pixels can be read from here by multiple threads simultaneously. 
     /// </summary>
-    class WrappedBitmap
+    internal class WrappedBitmap
     {
         private readonly bool[,] _pixels;
 
@@ -46,6 +46,17 @@ namespace EyeRobot
         public bool IsPixelSet(int x, int y)
         {
             return _pixels[x, y];
+        }
+
+        /// <summary>
+        /// Gets input images into a consistent format for recognition or training 
+        /// so we can compare like-for-like (involves trimming whitespace and 
+        /// making a consistent size, could also involve correcting colours and rotating/deskewing)
+        /// </summary>
+        private static Bitmap NormaliseInput(Bitmap input)
+        {
+            // TODO: implement
+            return input;
         }
     }
 }
