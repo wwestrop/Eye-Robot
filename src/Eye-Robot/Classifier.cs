@@ -42,8 +42,13 @@ namespace EyeRobot
             // the best we've got and try and massage them into something better. 
             var mutParams = new TuningParams.Mutation();
             var initialBestCandidates = initialGeneration.Take(100);            // TODO parameterise magic value (which was decided totally arbitrarily anyway)
-            var initialBestCandidatesWithMutatedVariants = initialBestCandidates
-                .Select(s => new ParentChildScoreCollection(s, s.Scorer.MutateMany(mutParams).Select(c => new ScorerScorePair(c, c.Score(inputData)))));            // TODO: neaten this, too many nested expressions
+            var initialBestCandidatesWithMutatedVariants = from p in initialBestCandidates
+                                                           let mutatedOffspring = p.Scorer.MutateMany(mutParams)
+                                                           let mutatedScores = from m in mutatedOffspring
+                                                                               let mutatedScore = m.Score(inputData)
+                                                                               select new ScorerScorePair(m, mutatedScore)
+                                                           select new ParentChildScoreCollection(p, mutatedScores);
+            
             var bestOftheMutantStrains = initialBestCandidatesWithMutatedVariants
                 .SelectMany(x => x.Children)
                 .OrderByDescending(s => s.Score)
