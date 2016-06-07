@@ -64,12 +64,16 @@ However! These features are not implemented yet. Stay tuned!
 
 Also coming up, things I'd like to look at:
 * So far, I'm getting reasonable (but not exceptional) results at recognising the image it was trained on. I'd like to build up a wider library of samples (See /sample-data/ - there are few different 'a' variants, but they are all quite similar). I'd also like to get some handwriting samples being recognised. 
-* Performance - In principle, the training algorithm is extremely parallelisable (trivially, I had thought, by calling 'AsParallel()' on the randomly generated list of 'Scorers'). ~~I could convert the input bitmap to a 2-dimensional boolean array. This would save calling `IsPixelSet` repeatedly, avoiding the brightness calculation, which would save approximately 4%, according to Visual Studio's profiler~~ (Done. But I need to benchmark it to be sure, and I was working in a coffee shop with dwindling battery. Didn't want to stress the laptop too much). The training algorithm is also a memory pig. 
+* Performance
+  * In principle, the training algorithm is extremely parallelisable as every scorer can compute its value independently of all others. (I have this working now via PLINQ on a single machine). 
+    * Now that the training is operating in parallel over PLINQ, I'd like to see if I could get this to operate over a cluster of computers, perhaps using something like DryadLINQ or Apache Spark. 
+  * ~~I could convert the input bitmap to a 2-dimensional boolean array. This would save calling `IsPixelSet` repeatedly, avoiding the brightness calculation, which would save approximately 4%, according to Visual Studio's profiler~~ (Done. But I need to benchmark it to be sure, and I was working in a coffee shop with dwindling battery. Didn't want to stress the laptop too much). The training algorithm is also a memory pig. 
 * Originally, `TuningParams` was a static bundle of constants. I'd like to at some point randomise these as well and pass varying sets of tuning options to different parts of the program in an attempt to settle on a better training model (you can already see some of this in the code). This is also partly because I chose the constant values by trial-and-error, they may not necessarily be particularly good. 
 * I'd like to add the ability to save a trained model to disk and reload it. 
 * I'd like to add image normalisation (ie correcting input images for skew, sizing, spacing, etc)
-* Further into the future, I'm still pondering how I'd handle training  more than one example image for a given symbol
-
+  * I began investigating how I might detect skew or rotation. I found [this](http://ntur.lib.ntu.edu.tw/bitstream/246246/142437/1/25.pdf). Looks quite complicated....  
+* Further into the future, I'm still pondering how I'd handle training more than one example image for a given symbol
+  * Currently, scoring is quite naive, every hit pixel is worth the same points as any other; perhaps we could give each pixel a certain weighting, derived as some sort of probability of that pixel being set or not, based upon the samples seen during training. 
 
 
 
