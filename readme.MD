@@ -83,18 +83,18 @@ Here is a sample of the results captured during training after mutation was adde
 
 |Letter               |Best improvement     |Average improvement  |Worst regression     |Average regression   |
 |---------------------|---------------------|---------------------|---------------------|---------------------|
-|a                    |350 / 25.93%         |231 / 17.01%         |-630 / -44.06%       |-466 / -34.18%       |
-|b                    |370 / 41.57%         |228 / 24.02%         |-600 / -59.34%       |-432 / -45.29%       |
-|c                    |370 / 48.53%         |216 / 29.09%         |-630 / -77.14%       |-411 / -55.27%       |
-|d                    |340 / 30.93%         |216 / 20.66%         |-610 / -61.00%       |-438 / -41.93%       |
-|e                    |450 / 54.88%         |223 / 25.34%         |-630 / -72.41%       |-430 / -48.45%       |
-|f                    |370 / 115.63%        |199 / 66.13%         |-500 / -200.00%      |-367 / -121.40%      |
+|a                    |+350 / +25.93%       |+231 / +17.01%       |-630 / -44.06%       |-466 / -34.18%       |
+|b                    |+370 / +41.57%       |+228 / +24.02%       |-600 / -59.34%       |-432 / -45.29%       |
+|c                    |+370 / +48.53%       |+216 / +29.09%       |-630 / -77.14%       |-411 / -55.27%       |
+|d                    |+340 / +30.93%       |+216 / +20.66%       |-610 / -61.00%       |-438 / -41.93%       |
+|e                    |+450 / +54.88%       |+223 / +25.34%       |-630 / -72.41%       |-430 / -48.45%       |
+|f                    |+370 / +115.63%      |+199 / +66.13%       |-500 / -200.00%      |-367 / -121.40%      |
 |                     |                     |                     |                     |                     |
-|Aggregated average   |375 / 52.91%         |218.84 / 30.375      |-600 / -85.67%       |-424 / -57.75%       |
+|Aggregated average   |+375 / +52.91%       |+218.84 / +30.375    |-600 / -85.67%       |-424 / -57.75%       |
 
 So, the mutations are able to produce better scores than the Scorer they are derived from. The question is, does this produce a better result than simply applying more rounds of the random brute-forcing method first implemented to get the initial generation? More analysis to follow!! 
 
-Despite that question, a quick glance at the above table shows that that the average improvement in this case is 200 points or thereabout, and the average regression is around -400 or so. These results are fairly repeatable using the sample images checked into the repo. This does seem to suggest that when small mutations are applied to already-high scorers, the good results improve more than the bad ones devolve. 
+Despite that question, a quick glance at the above table shows that that the average improvement in this case is +200 points or thereabout, and the average regression is around -400 or so. These results are fairly repeatable using the sample images checked into the repo. This does seem to suggest that when small mutations are applied to already-high scorers, the good results improve more than the bad ones devolve. 
 
 
 
