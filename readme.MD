@@ -60,9 +60,9 @@ When training the model, selecting the sampled pixels entirely at random did not
 
 During training, because each selected subset is completely random, each one is totally different to the last. If we have a high-scoring set of pixels, rather than trying something entirely different, it makes sense to try something that is only a little bit different to see if we can get closer to a solution. I hypothesised that making these sweeping changes from one generation to the next are not helping us to converge on a solution. From this, I've lifted two more ideas from biological processes to make changes more gradual. The first is that mutations in nature are small (not a total re-write from generation to generation as with our purely random pixel distributions); and the second is mixing up aspects of two pixel-sets, as with breeding in nature, in an attempt to mix-up the best bits of both and produce an overall higher-scoring child (except rather than taking half its genes from each parent, it takes half of the pixels that will be sampled from each parent). The idea is some of the child pixel distributions score higher than the parent they were derived from, and those are the ones we select to take forward. 
 
-However! These features are not implemented yet. Stay tuned! 
+The first feature, mutation, I have implemented and provided some analysis [here](#mutation). The second feature, breeding, is not implemented yet. Stay tuned! 
 
-Also coming up, things I'd like to look at:
+Also coming up, some other things I'd like to look at:
 * So far, I'm getting reasonable (but not exceptional) results at recognising the image it was trained on. I'd like to build up a wider library of samples (See /sample-data/ - there are few different 'a' variants, but they are all quite similar). I'd also like to get some handwriting samples being recognised. 
 * Performance
   * In principle, the training algorithm is extremely parallelisable as every scorer can compute its value independently of all others. (I have this working now via PLINQ on a single machine). 
@@ -76,6 +76,23 @@ Also coming up, things I'd like to look at:
   * Currently, scoring is quite naive, every hit pixel is worth the same points as any other; perhaps we could give each pixel a certain weighting, derived as some sort of probability of that pixel being set or not, based upon the samples seen during training. 
 
 
+# Mutation
+I've implemented mutation as described above, where the already highly-scoring pixel sets are selected and have a new generation of pixel sets are created by varying the original only slightly. This mutation can be seen being applied [here](https://github.com/wwestrop/Eye-Robot/blob/06443db11f88abce335e9b208b1a7763573e4bc1/src/Eye-Robot/Classifier.cs#L44).
+
+Here is a sample of the results captured during training after mutation was added (generated with 25,000 rounds to create the initial generation):
+
+|Letter               |Best improvement     |Average improvement  |Worst regression     |Average regression   |
+|---------------------|---------------------|---------------------|---------------------|---------------------|
+|a                    |350 / 25.93%         |231 / 17.01%         |-630 / -44.06%       |-466 / -34.18%       |
+|b                    |370 / 41.57%         |228 / 24.02%         |-600 / -59.34%       |-432 / -45.29%       |
+|c                    |370 / 48.53%         |216 / 29.09%         |-630 / -77.14%       |-411 / -55.27%       |
+|d                    |340 / 30.93%         |216 / 20.66%         |-610 / -61.00%       |-438 / -41.93%       |
+|e                    |450 / 54.88%         |223 / 25.34%         |-630 / -72.41%       |-430 / -48.45%       |
+|f                    |370 / 115.63%        |199 / 66.13%         |-500 / -200.00%      |-367 / -121.40%      |
+
+So, the mutations are able to produce better scores than the Scorer they are derived from. The question is, does this produce a better result than simply applying more rounds of the random brute-forcing method first implemented to get the initial generation? More analysis to follow!! 
+
+Despite that question, a quick glance at the above table shows that that the average improvement in this case is 200 points or thereabout, and the average regression is around -400 or so. These results are fairly repeatable using the sample images checked into the repo. This does seem to suggest that when small mutations are applied to already-high scorers, the good results improve more than the bad ones devolve. 
 
 
 
