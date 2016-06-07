@@ -89,6 +89,8 @@ Here is a sample of the results captured during training after mutation was adde
 |d                    |340 / 30.93%         |216 / 20.66%         |-610 / -61.00%       |-438 / -41.93%       |
 |e                    |450 / 54.88%         |223 / 25.34%         |-630 / -72.41%       |-430 / -48.45%       |
 |f                    |370 / 115.63%        |199 / 66.13%         |-500 / -200.00%      |-367 / -121.40%      |
+|                     |                     |                     |                     |                     |
+|Aggregated average   |375 / 52.91%         |218.84 / 30.375      |-600 / -85.67%       |-424 / -57.75%       |
 
 So, the mutations are able to produce better scores than the Scorer they are derived from. The question is, does this produce a better result than simply applying more rounds of the random brute-forcing method first implemented to get the initial generation? More analysis to follow!! 
 
