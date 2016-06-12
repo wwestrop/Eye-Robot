@@ -97,4 +97,31 @@ So, the mutations are able to produce better scores than the Scorer they are der
 Despite that question, a quick glance at the above table shows that that the average improvement in this case is +200 points or thereabout, and the average regression is around -400 or so. These results are fairly repeatable using the sample images checked into the repo. This does seem to suggest that when small mutations are applied to already-high scorers, the good results improve more than the bad ones devolve. 
 
 
+# Known or expected weaknesses
+Feeling _relatively_ happy with the way the software was recognising a handful of letters, I decided to step it up a bit and add more letters, and also some simple polygons. 
 
+The first thing that gave me pause was the fact that some letters, such as the 'm' below are quite chunky and fill the frame:
+
+![](/doc/m.png)
+
+
+Whereas something like this 'j' is thin and spindly:
+
+![](/doc/j.png)
+
+
+I'm pondering if this might affect accuracy. More investigation and analysis to follow....
+
+The second "uh-oh" moment I spotted was when adding shapes. Here we have a circle, a pentagon, and a triangle. 
+
+![](/doc/circle.png)     ![](/doc/pentagon.png)     ![](/doc/triangle.png)
+
+	
+So far so good. Here we have a square:
+
+![](/doc/square.png)
+
+
+Hmm. Every pixel is set. No matter what distribution of pixels our algorithm selects to sample, it will get a 100% hit rate.
+
+The final problem I’m noting having added numerous samples, is that training time is taking longer. I already predicted this previously, however as noted then, the algorithm is trivially parallelisable and I wish to experiment with scaling it to multiple machines in a cluster. 
