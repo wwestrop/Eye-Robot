@@ -58,7 +58,7 @@ The concept I took away from that discovery is that, as with biological evolutio
 # Where next?
 When training the model, selecting the sampled pixels entirely at random did not work as well as I'd hoped.
 
-During training, because each selected subset is completely random, each one is totally different to the last. If we have a high-scoring set of pixels, rather than trying something entirely different, it makes sense to try something that is only a little bit different to see if we can get closer to a solution. I hypothesised that making these sweeping changes from one generation to the next are not helping us to converge on a solution. From this, I've lifted two more ideas from biological processes to make changes more gradual. The first is that mutations in nature are small (not a total re-write from generation to generation as with our purely random pixel distributions); and the second is mixing up aspects of two pixel-sets, as with breeding in nature, in an attempt to mix-up the best bits of both and produce an overall higher-scoring child (except rather than taking half its genes from each parent, it takes half of the pixels that will be sampled from each parent). The idea is some of the child pixel distributions score higher than the parent they were derived from, and those are the ones we select to take forward. 
+During training, because each selected subset is completely random, each one is totally different to the last. If we have a high-scoring set of pixels, rather than trying something entirely different, it makes sense to try something that is only a little bit different to see if we can get closer to a solution. I hypothesised that making these sweeping changes from one generation to the next are not helping us to converge on a solution. From this, I've lifted two more ideas from biological processes to make changes more gradual. The first is that mutations in nature are small (not a total re-write from generation to generation as with our purely random pixel distributions); and the second is mixing up aspects of two pixel-sets, as with breeding in nature, in an attempt to mix-up the best bits of both and produce an overall higher-scoring child (except rather than taking half its genes from each parent, it takes half of the pixels that will be sampled from each parent). The idea is some of the child pixel distributions score higher than the parent they were derived from, and those are the ones we select to take forward. There is a third biological analog in the algorithm, which might be considered something like a "plague" - that is, killing off the majority of the population and letting only the strongest survive into the next generation. I baked this idea into the algorithm, though it was by accident (and was done because of memory constraints of having a large population) - I only take the top n from each round into the mutation phase.  
 
 The first feature, mutation, I have implemented and provided some analysis [here](#mutation). The second feature, breeding, is not implemented yet. Stay tuned! 
 
@@ -68,7 +68,7 @@ Also coming up, some other things I'd like to look at:
   * In principle, the training algorithm is extremely parallelisable as every scorer can compute its value independently of all others. (I have this working now via PLINQ on a single machine). 
     * Now that the training is operating in parallel over PLINQ, I'd like to see if I could get this to operate over a cluster of computers, perhaps using something like DryadLINQ or Apache Spark. 
   * ~~I could convert the input bitmap to a 2-dimensional boolean array. This would save calling `IsPixelSet` repeatedly, avoiding the brightness calculation, which would save approximately 4%, according to Visual Studio's profiler~~ (Done. But I need to benchmark it to be sure, and I was working in a coffee shop with dwindling battery. Didn't want to stress the laptop too much). The training algorithm is also a memory pig. 
-* Originally, `TuningParams` was a static bundle of constants. I'd like to at some point randomise these as well and pass varying sets of tuning options to different parts of the program in an attempt to settle on a better training model (you can already see some of this in the code). This is also partly because I chose the constant values by trial-and-error, they may not necessarily be particularly good. 
+* Originally, `TuningParams` was a static bundle of constants. I'd like to at some point randomise these as well and pass varying sets of tuning options to different parts of the program in an attempt to settle on a better training model (you can already see some of this in the code). This is also partly because I chose the constant values by trial-and-error, they may not necessarily be particularly good. Mutation could apply to these params, instead of just the sampled pixels. 
 * I'd like to add the ability to save a trained model to disk and reload it. 
 * I'd like to add image normalisation (ie correcting input images for skew, sizing, spacing, etc)
   * I began investigating how I might detect skew or rotation. I found [this](http://ntur.lib.ntu.edu.tw/bitstream/246246/142437/1/25.pdf). Looks quite complicated....  
@@ -77,7 +77,7 @@ Also coming up, some other things I'd like to look at:
 
 
 # Mutation
-I've implemented mutation as described above, where the already highly-scoring pixel sets are selected and have a new generation of pixel sets are created by varying the original only slightly. This mutation can be seen being applied [here](https://github.com/wwestrop/Eye-Robot/blob/06443db11f88abce335e9b208b1a7763573e4bc1/src/Eye-Robot/Classifier.cs#L44).
+I've implemented mutation as described above, where the already highly-scoring pixel sets are selected and have a new generation of pixel sets are created by varying the original only slightly. This mutation can be seen being applied [here](https://github.com/wwestrop/Eye-Robot/blob/1790700b35ce13623f5d25e5e0760427c6fa2385/src/Eye-Robot/Classifier.cs#L45).
 
 Here is a sample of the results captured during training after mutation was added (generated with 25,000 rounds to create the initial generation):
 
@@ -112,7 +112,7 @@ Whereas something like this 'j' is thin and spindly:
 
 I'm pondering if this might affect accuracy. More investigation and analysis to follow....
 
-The second "uh-oh" moment I spotted was when adding shapes. Here we have a circle, a pentagon, and a triangle. 
+The second "uh-oh" moment I spotted was when adding shapes to the sample data. Here we have a circle, a pentagon, and a triangle. 
 
 ![](/doc/circle.png)     ![](/doc/pentagon.png)     ![](/doc/triangle.png)
 
@@ -124,4 +124,6 @@ So far so good. Here we have a square:
 
 Hmm. Every pixel is set. No matter what distribution of pixels our algorithm selects to sample, it will get a 100% hit rate.
 
-The final problem I’m noting having added numerous samples, is that training time is taking longer. I already predicted this previously, however as noted then, the algorithm is trivially parallelisable and I wish to experiment with scaling it to multiple machines in a cluster. 
+The final problem I’m noting having added numerous samples, is that training time is taking longer. I already predicted this previously, however as noted then, the algorithm is trivially parallelisable and I wish to experiment with scaling it to multiple machines in a cluster at some point. 
+
+Another problem. The algorithm is getting pretty good at recognising the images it was trained on. Getting it to recognise similar images is the next step (I've already done this with the letter 'a' in the sample data, but more needs to be done)
