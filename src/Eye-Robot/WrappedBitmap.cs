@@ -1,3 +1,4 @@
+using System;
 using System.Drawing;
 
 namespace EyeRobot
@@ -15,6 +16,8 @@ namespace EyeRobot
         /// </summary>
         public static WrappedBitmap FromFile(string sourceFile)
         {
+            if (string.IsNullOrWhiteSpace(sourceFile)) throw new ArgumentNullException(nameof(sourceFile));
+
             using (var imageData = Image.FromFile(sourceFile) as Bitmap)
             {
                 return new WrappedBitmap(imageData);
@@ -23,6 +26,8 @@ namespace EyeRobot
 
         public WrappedBitmap(Bitmap input)
         {
+            if(input == null) throw new ArgumentNullException(nameof(input));
+
             _pixels = new bool[input.Width, input.Height];
 
             for (int y = 0; y < input.Height; y++)

@@ -1,6 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Drawing;
 using EyeRobot;
+using System;
+using System.IO;
 
 namespace UnitTests {
 
@@ -85,6 +87,34 @@ namespace UnitTests {
             WrappedBitmap wb = new WrappedBitmap(_bitmap);
 
             Assert.IsTrue(wb.IsPixelSet(X1, Y1));
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Null_Input_Bitmap_Not_Acceptable() {
+            WrappedBitmap wb = new WrappedBitmap(null);
+            // ExpectedException attribute will catch
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Null_Filename_Not_Acceptable() {
+            WrappedBitmap wb = WrappedBitmap.FromFile(null);
+            // ExpectedException attribute will catch
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Empty_Filename_Not_Acceptable() {
+            WrappedBitmap wb = WrappedBitmap.FromFile("");
+            // ExpectedException attribute will catch
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(FileNotFoundException))]
+        public void Nonexistent_Filename_Throws() {
+            WrappedBitmap wb = WrappedBitmap.FromFile(@"Z:\Of course, if this path actually exists on somebody's drive, the test will pass wrongly\But I think it's pretty unlikely\And am willing to take the risk\testFile.png");
+            // ExpectedException attribute will catch
         }
     }
 
