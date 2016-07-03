@@ -3,6 +3,10 @@ using System.Linq;
 
 namespace EyeRobot
 {
+    /// <summary>
+    /// Given an input image, will produce a set of scores of how likely it is that
+    /// the supplied image represents each of the symbols we've been trained on. 
+    /// </summary>
     internal class Classifier<TSymbol>
     {
         private readonly Dictionary<TSymbol, Recogniser<TSymbol>> _recognisers = new Dictionary<TSymbol, Recogniser<TSymbol>>();
@@ -77,10 +81,10 @@ namespace EyeRobot
     /// </summary>
     internal class ScorerScorePair
     {
-        public readonly Scorer Scorer;
+        public readonly IScorer Scorer;
         public readonly int Score;
 
-        public ScorerScorePair(Scorer scorer, int score)
+        public ScorerScorePair(IScorer scorer, int score)
         {
             this.Scorer = scorer;
             this.Score = score;

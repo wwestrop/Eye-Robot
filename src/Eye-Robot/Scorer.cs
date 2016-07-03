@@ -5,8 +5,16 @@ using System.Linq;
 
 namespace EyeRobot
 {
-    internal class Scorer
-    {
+    internal interface IScorer {
+        int Score(WrappedBitmap inputData);
+        IScorer Mutate(TuningParams.Mutation tuningParams);
+        IEnumerable<IScorer> MutateMany(TuningParams.Mutation tuningParams);
+    }
+
+    /// <summary>
+    /// Assigns a score to a given image, by sampling a specific subset of set of pixels
+    /// </summary>
+    internal class Scorer : IScorer {
         private static readonly Random _randomNumGenerator = new Random();
         private readonly TuningParams.Scoring _tuningParams;
         private readonly List<Point> _pixelsToSample;
@@ -70,7 +78,7 @@ namespace EyeRobot
             return randomPixels;
         }
 
-        public IEnumerable<Scorer> MutateMany(TuningParams.Mutation tuningParams)
+        public IEnumerable<IScorer> MutateMany(TuningParams.Mutation tuningParams)
         {
             return Enumerable.Range(0, tuningParams.SpawnedDescendants)
                 .Select(i => Mutate(tuningParams));
@@ -79,7 +87,7 @@ namespace EyeRobot
         /// <summary>
         /// Randomises the sampled pixels, but keeps them relatively close to their existing locations. 
         /// </summary>
-        public Scorer Mutate(TuningParams.Mutation tuningParams)
+        public IScorer Mutate(TuningParams.Mutation tuningParams)
         {
             var newPixels = new List<Point>(_pixelsToSample);
 
